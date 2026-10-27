@@ -1,1 +1,7 @@
-python -m pip show fastapi
+streamlit
+fastapi
+uvicorn
+openai
+psycopg2-binary
+python-dotenv
+requests
