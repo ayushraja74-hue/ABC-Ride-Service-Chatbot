@@ -1,0 +1,41 @@
+
+Company Name: ABC Ride Service
+
+About Company:
+ABC Ride Service is a fictional taxi booking company.
+It provides transportation services to customers.
+
+Service Cities:
+- Delhi
+- Noida
+- Gurugram
+
+Ride Types:
+- Personal Ride
+- Shared Ride
+- Airport Ride
+
+Booking Process:
+Customers can book a ride using the ABC Ride Service mobile application.
+
+Cancellation Policy:
+Customers can cancel their booking before a driver is assigned.
+After driver assignment, a cancellation fee of Rs. 30 applies.
+
+Payment Methods:
+- Cash
+- UPI
+- Debit Card
+- Credit Card
+
+Customer Support:
+Customer support is available from 9 AM to 8 PM every day.
+
+Driver Assignment:
+The system assigns an available driver based on the customer's pickup location.
+
+Airport Ride:
+Airport rides are available in Delhi and Gurugram.
+
+Refund Policy:
+Eligible refunds are processed within 5 to 7 working days.
