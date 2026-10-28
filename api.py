@@ -6,6 +6,8 @@ from typing import Literal
 from uuid import UUID, uuid4
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from chatbot import get_ai_response
@@ -16,14 +18,26 @@ from database import (
 )
 
 
-# 1. Load company information
+# 1. Project paths and company information
 BASE_DIR = Path(__file__).resolve().parent
 COMPANY_DATA_FILE = BASE_DIR / "company_data.txt"
+FRONTEND_DIR = BASE_DIR / "frontend"
 
 if not COMPANY_DATA_FILE.exists():
     raise FileNotFoundError(
         f"Company data file not found: {COMPANY_DATA_FILE}"
     )
+
+if not FRONTEND_DIR.exists():
+    raise FileNotFoundError(
+        f"Frontend folder not found: {FRONTEND_DIR}"
+    )
+
+for filename in ("index.html", "style.css", "script.js"):
+    if not (FRONTEND_DIR / filename).is_file():
+        raise FileNotFoundError(
+            f"Frontend file not found: {FRONTEND_DIR / filename}"
+        )
 
 COMPANY_DATA = COMPANY_DATA_FILE.read_text(encoding="utf-8")
 
@@ -55,14 +69,22 @@ Company Information:
 app = FastAPI(
     title="ABC Ride Service Chatbot API",
     description=(
-        "Chatbot API with PostgreSQL chat history "
-        "and per-chat memory"
+        "Chatbot API with PostgreSQL chat history, "
+        "per-chat memory, and HTML/CSS/JavaScript frontend"
     ),
-    version="3.1.0",
+    version="3.2.0",
 )
 
 
-# 4. Request and response models
+# 4. Serve CSS and JavaScript from the existing frontend folder
+app.mount(
+    "/static",
+    StaticFiles(directory=str(FRONTEND_DIR)),
+    name="static",
+)
+
+
+# 5. Request and response models
 class ChatRequest(BaseModel):
     chat_id: UUID | None = None
     message: str = Field(min_length=1, max_length=10000)
@@ -91,7 +113,7 @@ class ChatListItem(BaseModel):
     updated_at: str | None = None
 
 
-# 5. Format saved memories
+# 6. Format saved memories
 def format_memories(memories):
     if not memories:
         return "No saved memories for this chat."
@@ -102,7 +124,7 @@ def format_memories(memories):
     )
 
 
-# 6. Extract and save relevant memories
+# 7. Extract and save relevant memories
 def update_chat_memory(chat_id: UUID, user_message: str):
     """
     Extract useful, non-sensitive information from the user's
@@ -195,17 +217,22 @@ Latest user message:
         print("Memory update error:", repr(e))
 
 
-# 7. Home endpoint
-@app.get("/")
+# 8. Frontend home page
+@app.get("/", include_in_schema=False)
 def home():
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+# 9. API health endpoint
+@app.get("/health")
+def health():
     return {
+        "status": "ok",
         "message": "ABC Ride Service API is running",
-        "docs": "/docs",
-        "chat_list": "/chats",
     }
 
 
-# 8. Retrieve previous chats for the sidebar
+# 10. Retrieve previous chats for the sidebar
 @app.get(
     "/chats",
     response_model=list[ChatListItem],
@@ -242,7 +269,7 @@ def get_all_chats():
         )
 
 
-# 9. Retrieve messages from a selected chat
+# 11. Retrieve messages from a selected chat
 @app.get(
     "/chats/{chat_id}/messages",
     response_model=ChatHistoryResponse,
@@ -304,7 +331,7 @@ def get_chat_history(chat_id: UUID):
         )
 
 
-# 10. Chat endpoint
+# 12. Main chat endpoint
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     user_message = request.message.strip()
@@ -347,7 +374,7 @@ def chat(request: ChatRequest):
                             detail="Chat ID not found.",
                         )
 
-                # Save the latest user message.
+                # Save the user's message.
                 cur.execute(
                     """
                     INSERT INTO chat.messages (chat_id, role, content)
@@ -356,7 +383,7 @@ def chat(request: ChatRequest):
                     (chat_id, "user", user_message),
                 )
 
-                # Retrieve conversation history.
+                # Retrieve history for this chat only.
                 cur.execute(
                     """
                     SELECT role, content
@@ -442,5 +469,5 @@ def chat(request: ChatRequest):
         print("Chat API error:", repr(e))
         raise HTTPException(
             status_code=502,
-            detail="Chat request failed. Check the server terminal.",
+            detail="Chat request failed. Check the server logs.",
         )
